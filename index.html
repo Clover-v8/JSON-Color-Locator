@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Universal JSON Color Locator - Pro</title>
+
+<style>
+/* ===== Color Variables ===== */
+:root {
+    /* Dark Mode (Default) */
+    --bg: #0e0d10;
+    --card: #111;
+    --accent: #41AB5D;
+    --text: #ffffff;
+    --input-bg: #161519;
+    --border: #333;
+    --shadow: rgba(0,0,0,0.5);
+    --hover-bg: rgba(255,255,255,0.1);
+    --btn-border: #333;
+    
+    /* Scrollbar Colors */
+    --scroll-track: transparent;
+    --scroll-thumb: #333;
+    --scroll-thumb-hover: #41AB5D;
+}
+
+/* Light Mode Override */
+body.light-mode {
+    --bg: #f4f6f8;
+    --card: #ffffff;
+    --accent: #2e8b57;
+    --text: #1a1a1a;
+    --input-bg: #ffffff;
+    --border: #d1d5db;
+    --shadow: rgba(0,0,0,0.1);
+    --hover-bg: rgba(0,0,0,0.05);
+    --btn-border: #ccc;
+    
+    /* Light Mode Scrollbar */
+    --scroll-thumb: #ccc;
+    --scroll-thumb-hover: #2e8b57;
+}
+
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--text); font-family:Arial, sans-serif; line-height: 1.5; overflow-x: hidden; transition: background 0.3s, color 0.3s; }
+body.modal-open { overflow: hidden; }
+
+/* ===== CUSTOM STYLISH SCROLLBAR ===== */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--scroll-track); 
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--scroll-thumb); 
+    border-radius: 6px;
+    border: 2px solid var(--bg);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--scroll-thumb-hover);
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scroll-thumb) var(--bg);
+}
+
+/* ===== Loading ===== */
+#loading { position:fixed; inset:0; background:var(--bg); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:999; }
+.spinner { width:56px; height:56px; border:6px solid transparent; border-top:6px solid var(--accent); border-right:6px solid var(--accent); border-radius:50%; animation:spin 1s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* ===== App Layout ===== */
+#app { display:none; padding:20px; max-width:1000px; margin:auto; }
+
+/* Header Layout */
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    padding-bottom: 10px;
+}
+
+.title-container h2 {
+    margin: 0;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+}
+
+.subtitle { opacity:0.6; font-size:14px; margin-top: 5px; }
+
+/* ===== NEW THEME BUTTON ===== */
+.theme-btn {
+    background: transparent;
+    border: 1px solid var(--btn-border);
+    color: var(--text);
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: 0.3s;
+    outline: none;
+}
+
+.theme-btn:hover {
+    background: var(--hover-bg);
+    border-color: var(--accent);
+    transform: translateY(-2px);
+}
+
+.theme-btn svg {
+    width: 26px;
+    height: 26px;
+    stroke: var(--text);
+    stroke-width: 2;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: 0.3s;
+}
+
+.sun-icon { display: block; }
+.moon-icon { display: none; }
+body.light-mode .sun-icon { display: none; }
+body.light-mode .moon-icon { display: block; }
+
+
+/* ===== Inputs & Buttons ===== */
+.input-container { position:relative; margin-bottom: 20px; }
+
+textarea { 
+    /* Width logic */
+    width: 99%; 
+    margin-right: 1%;
+    
+    /* Height Logic - Desktop Default */
+    height: 40vh;       
+    min-height: 150px;  
+    max-height: 90vh;   
+    resize: vertical; 
+    
+    background:var(--input-bg); 
+    color:var(--text); 
+    border:1px solid var(--border); 
+    border-radius:12px; 
+    padding:15px; 
+    font-family:monospace; 
+    font-size: 14px; 
+    outline: none; 
+    transition: 0.3s; 
+}
+
+/* --- MOBILE HEIGHT OVERRIDE START --- */
+@media (max-width: 768px) {
+    textarea {
+        height: 25vh; /* 25% of viewport height on mobile */
+    }
+}
+/* --- MOBILE HEIGHT OVERRIDE END --- */
+
+textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(65, 171, 93, 0.2); }
+
+.clear-btn { 
+    position:absolute; top:12px; right: 2%;
+    background:var(--hover-bg); color:var(--text); 
+    border:none; border-radius:50%; width:30px; height:30px; 
+    cursor:pointer; font-size:18px; display: flex; align-items: center; justify-content: center; transition: 0.2s; 
+}
+.clear-btn:hover { background:rgba(128,128,128,0.3); }
+
+.btn-group { display: flex; gap: 10px; margin-bottom: 20px; width: 99%; }
+button { padding:14px; border-radius:10px; font-weight:bold; cursor:pointer; font-size: 16px; transition: 0.3s; border: none; }
+button:hover { opacity: 0.9; transform: translateY(-2px); }
+button:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+
+.primary-btn { flex: 2; background:var(--accent); color:#fff; }
+.secondary-btn { flex: 1; background:transparent; border:1px solid var(--accent); color:var(--accent); }
+.undo-btn { flex: 0.5; background:var(--card); color:var(--text); border:1px solid var(--border); display: flex; align-items: center; justify-content: center; gap: 5px; }
+
+/* ===== Grid ===== */
+.grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:15px; width: 99%; }
+.color-card { background:var(--card); border-radius:12px; overflow:hidden; cursor:pointer; border:1px solid var(--border); transition: 0.2s; position: relative; box-shadow: 0 2px 8px var(--shadow); }
+.color-card:hover { border-color: var(--accent); transform: translateY(-3px); box-shadow: 0 8px 20px var(--shadow); }
+.swatch { height:80px; width: 100%; }
+.code-label { text-align:center; padding:8px; font-size:12px; font-family: monospace; background:var(--input-bg); color:var(--text); border-top: 1px solid var(--border); }
+
+/* ===== Popups ===== */
+.popup { position:fixed; inset:0; background:rgba(0,0,0,0.85); display:none; align-items:center; justify-content:center; padding:10px; z-index:1000; backdrop-filter: blur(5px); }
+
+/* Popup Content - Strict Limits */
+.popup-content { 
+    background:var(--input-bg); 
+    width:100%; 
+    max-width:600px; 
+    max-height:90vh; 
+    padding:20px; 
+    border-radius:16px; 
+    overflow-y:auto; 
+    overflow-x:hidden; 
+    position:relative; 
+    border: 1px solid var(--border); 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+    color: var(--text); 
+}
+
+.popup-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.popup-header h3 { margin: 0; font-size: 18px; }
+.popup-close { background:none; border:none; color:#777; font-size:28px; cursor:pointer; transition: color 0.2s; line-height: 1; display: flex; align-items: center; }
+.popup-close:hover { color: var(--text); }
+
+.path-item { font-family:monospace; background:var(--bg); padding:12px; border-radius:8px; margin-bottom:8px; font-size:12px; display:flex; align-items: flex-start; border: 1px solid var(--border); word-break: break-all; }
+.path-item input { margin-right:12px; margin-top: 3px; transform: scale(1.2); flex-shrink: 0; cursor: pointer; accent-color: var(--accent); }
+.path-item span { flex: 1; line-height: 1.4; opacity: 0.8; }
+
+.edit-area { display:flex; gap:10px; }
+#newColorInput { flex:1; padding:12px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-family: monospace; }
+@media (max-width: 400px) { .edit-area { flex-direction: column; } }
+
+/* Final JSON Output Box - Strict Limits */
+#finalJsonText { 
+    background:var(--bg); 
+    color:var(--accent); 
+    height: 350px; 
+    max-height: 50vh; 
+    font-size: 13px; 
+    margin-top: 10px; 
+    width: 100%; 
+    border: 1px solid var(--border); 
+    border-radius: 8px; 
+    padding: 10px; 
+    white-space: pre; 
+    overflow: auto; 
+    outline: none; 
+}
+
+/* Links & Footer */
+.header-clover { text-decoration: none; font-size: 20px; margin-left: 8px; transition: transform 0.2s; display: inline-block; cursor: pointer; }
+.header-clover:hover { transform: scale(1.2); }
+
+footer { text-align:center; margin:40px 0; opacity:.6; font-size:13px; color: var(--text); }
+.footer-link { color: inherit; text-decoration: none; transition: 0.3s; display: inline-flex; align-items: center; gap: 5px; }
+.footer-link:hover { opacity: 1; color: var(--accent); transform: scale(1.05); }
+
+@media (max-width:480px) { 
+  .grid { grid-template-columns:repeat(3,1fr); gap:8px; } 
+  .btn-group { flex-direction: column; }
+  .popup-content { padding: 15px; width: 95%; }
+}
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <h1 style="margin-top:20px;">Color Locator Pro</h1>
+  <div style="opacity:0.6">Processing...</div>
+</div>
+
+<div id="app">
+  <header class="app-header">
+      <div class="title-container">
+          <h2 style="margin:0;">
+             JSON Color Locator 
+             <a href="https://linktr.ee/clover.v8" target="_blank" class="header-clover">🍀</a>
+          </h2>
+          <div class="subtitle">Find and batch-replace hex colors</div>
+      </div>
+
+      <button class="theme-btn" onclick="toggleTheme()" aria-label="Toggle Dark Mode">
+        <svg class="sun-icon" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+        
+        <svg class="moon-icon" viewBox="0 0 24 24">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+      </button>
+  </header>
+
+  <div class="input-container">
+    <textarea id="jsonInput" placeholder="Paste your JSON here..."></textarea>
+    <button class="clear-btn" onclick="clearJSON()">×</button>
+  </div>
+
+  <div class="btn-group">
+    <button class="primary-btn" onclick="processJSON()">Extract Colors</button>
+    <button class="undo-btn" id="undoBtn" onclick="undoLastChange()" disabled>↩ Undo</button>
+    <button class="secondary-btn" onclick="showJsonOutput()">View Output</button>
+  </div>
+
+  <div class="grid" id="colorsGrid"></div>
+
+  <footer>
+    <a href="https://linktr.ee/clover.v8" target="_blank" class="footer-link">
+        made by c.v.8 🍀
+    </a>
+  </footer>
+</div>
+
+<div class="popup" id="editPopup">
+  <div class="popup-content">
+    <div class="popup-header">
+        <h3 id="popupTitle">Color Details</h3>
+        <button class="popup-close" onclick="closePopup('editPopup')">×</button>
+    </div>
+    
+    <div style="margin-bottom:20px; background:var(--bg); padding:15px; border-radius:10px; border: 1px solid var(--border);">
+      <label style="display:block; margin-bottom:8px; font-size:14px; opacity:0.7;">New Hex Color:</label>
+      <div class="edit-area">
+        <input type="text" id="newColorInput" placeholder="#RRGGBB">
+        <button onclick="applyColorChange()" class="primary-btn" style="padding:12px 20px; flex:unset;">Apply</button>
+      </div>
+    </div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <span style="font-size:14px; font-weight:bold;">Occurrences:</span>
+        <label style="font-size:13px; cursor:pointer; display:flex; align-items:center;"><input type="checkbox" id="selectAll" onchange="toggleAllPaths(this)" style="margin-right:5px;"> Select All</label>
+    </div>
+    <div id="popupPaths" style="max-height: 300px; overflow-y: auto;"></div>
+  </div>
+</div>
+
+<div class="popup" id="outputPopup">
+  <div class="popup-content" style="max-width:800px;">
+    <div class="popup-header">
+        <h3>Modified JSON Output</h3>
+        <button class="popup-close" onclick="closePopup('outputPopup')">×</button>
+    </div>
+    <button onclick="downloadJSON()" class="primary-btn" style="width:100%; margin-bottom:10px;">Download .json File</button>
+    <textarea id="finalJsonText" readonly placeholder="Your updated JSON will appear here..."></textarea>
+    
+    <footer style="margin: 20px 0 0 0;">
+        <a href="https://linktr.ee/clover.v8" target="_blank" class="footer-link">
+            made by c.v.8 🍀
+        </a>
+    </footer>
+  </div>
+</div>
+
+<script>
+// Simulate Loading - CHANGED TO 3 SECONDS (3000ms)
+setTimeout(() => { 
+  document.getElementById("loading").style.display="none"; 
+  document.getElementById("app").style.display="block"; 
+}, 3000);
+
+// --- THEME LOGIC ---
+const currentTheme = localStorage.getItem('theme');
+if (currentTheme === 'light-mode') {
+    document.body.classList.add('light-mode');
+}
+
+function toggleTheme() {
+    document.body.classList.toggle('light-mode');
+    
+    if (document.body.classList.contains('light-mode')) {
+        localStorage.setItem('theme', 'light-mode');
+    } else {
+        localStorage.setItem('theme', 'dark-mode');
+    }
+}
+// -------------------
+
+let currentData = null;
+let colorMap = {};
+let historyStack = [];
+
+function openPopup(id) {
+    document.getElementById(id).style.display = "flex";
+    document.body.classList.add('modal-open'); 
+}
+
+function closePopup(id) {
+    document.getElementById(id).style.display = "none";
+    const anyOpen = Array.from(document.querySelectorAll('.popup')).some(p => p.style.display === "flex");
+    if (!anyOpen) {
+        document.body.classList.remove('modal-open');
+    }
+}
+
+function processJSON() {
+  const input = document.getElementById('jsonInput').value;
+  if (!input.trim()) { alert("Please paste JSON first."); return; }
+  try { 
+    currentData = JSON.parse(input); 
+    historyStack = []; 
+    updateUndoUI();
+    refreshData(); 
+  } catch(e) { alert("Error: Invalid JSON format."); }
+}
+
+function refreshData() {
+    colorMap = {};
+    walk(currentData, "");
+    renderGrid();
+}
+
+function walk(obj, path) {
+  if (Array.isArray(obj)) { 
+      obj.forEach((v, i) => walk(v, `${path}[${i}]`)); 
+  } else if (obj && typeof obj === "object") { 
+      Object.entries(obj).forEach(([k, v]) => walk(v, path ? `${path}.${k}` : k)); 
+  } else if (typeof obj === "string") {
+    const hexRegex = /^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+    if (hexRegex.test(obj) || obj.toLowerCase() === "transparent") {
+        const c = obj.toLowerCase();
+        if (!colorMap[c]) colorMap[c] = [];
+        colorMap[c].push(path);
+    }
+  }
+}
+
+function renderGrid() {
+  const grid = document.getElementById('colorsGrid');
+  grid.innerHTML = "";
+  Object.entries(colorMap).forEach(([color, paths]) => {
+    const card = document.createElement("div");
+    card.className = "color-card";
+    card.onclick = () => {
+        showEditPopup(color, paths);
+        openPopup('editPopup');
+    };
+    const swatch = document.createElement("div");
+    swatch.className = "swatch";
+    swatch.style.background = (color === "transparent") ? "repeating-conic-gradient(#333 0% 25%, #111 0% 50%) 0% 0% / 10px 10px" : color;
+    const label = document.createElement("div");
+    label.className = "code-label";
+    label.textContent = `${color} (${paths.length})`;
+    card.append(swatch, label);
+    grid.appendChild(card);
+  });
+}
+
+function showEditPopup(color, paths) {
+  document.getElementById('popupTitle').textContent = `Editing: ${color}`;
+  document.getElementById('newColorInput').value = color;
+  const container = document.getElementById('popupPaths');
+  container.innerHTML = "";
+  document.getElementById('selectAll').checked = false;
+  paths.forEach(p => {
+    const div = document.createElement("div");
+    div.className = "path-item";
+    div.innerHTML = `<label style="display:flex; width:100%; cursor:pointer;"><input type="checkbox" value="${p}"> <span style="margin-left:8px;">${p}</span></label>`;
+    container.appendChild(div);
+  });
+}
+
+function saveStateToHistory() {
+    if (currentData) {
+        historyStack.push(JSON.stringify(currentData));
+        updateUndoUI();
+    }
+}
+
+function undoLastChange() {
+    if (historyStack.length === 0) return;
+    currentData = JSON.parse(historyStack.pop());
+    document.getElementById('jsonInput').value = JSON.stringify(currentData, null, 2);
+    updateUndoUI();
+    refreshData();
+}
+
+function updateUndoUI() {
+    document.getElementById('undoBtn').disabled = historyStack.length === 0;
+}
+
+function applyColorChange() {
+  const newColor = document.getElementById('newColorInput').value.trim();
+  const hexCheck = /^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+  if (!hexCheck.test(newColor) && newColor.toLowerCase() !== 'transparent') { alert("Invalid Hex!"); return; }
+  
+  const selectedBoxes = document.querySelectorAll('#popupPaths input:checked');
+  if (selectedBoxes.length === 0) { alert("Select at least one path."); return; }
+  
+  saveStateToHistory();
+
+  selectedBoxes.forEach(box => {
+    const path = box.value;
+    const keys = path.replace(/\[(\d+)\]/g, '.$1').split('.').filter(k => k !== "");
+    let obj = currentData;
+    for (let i = 0; i < keys.length - 1; i++) { obj = obj[keys[i]]; }
+    obj[keys[keys.length - 1]] = newColor;
+  });
+  
+  closePopup('editPopup');
+  document.getElementById('jsonInput').value = JSON.stringify(currentData, null, 2);
+  refreshData();
+}
+
+function showJsonOutput() {
+  if (!currentData) { alert("Extract colors first!"); return; }
+  document.getElementById('finalJsonText').value = JSON.stringify(currentData, null, 2);
+  openPopup('outputPopup');
+}
+
+function downloadJSON() {
+  if (!currentData) return;
+  const blob = new Blob([JSON.stringify(currentData, null, 2)], {type : 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = "updated_theme.json";
+  a.click();
+}
+
+function toggleAllPaths(master) { 
+    document.querySelectorAll('#popupPaths input[type="checkbox"]').forEach(i => i.checked = master.checked); 
+}
+
+function clearJSON() { 
+    if(confirm("Clear everything?")) {
+        document.getElementById('jsonInput').value = ""; 
+        document.getElementById('colorsGrid').innerHTML = ""; 
+        currentData = null; 
+        historyStack = [];
+        updateUndoUI();
+    }
+}
+
+document.addEventListener('keydown', function(event) {
+    if (event.key === "Escape") {
+        document.querySelectorAll('.popup').forEach(p => closePopup(p.id));
+    }
+    if ((event.ctrlKey || event.metaKey) && event.key === 'z') {
+        event.preventDefault();
+        undoLastChange();
+    }
+});
+</script>
+
+</body>
+</html>
